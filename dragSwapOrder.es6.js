@@ -137,6 +137,8 @@
             // drop indicator
             this.customMarkerFunc = OPTS.customMarkerFunc || null;
             this.onDropFunc = OPTS.onDropFunc || null;
+            this.onBeforeDragFunc = OPTS.onBeforeDragFunc || null;
+
             this.isDraggedClass = OPTS.isDraggedClass || "is-dragged";
             this.hasDraggedClass = OPTS.hasDraggedClass || "has-dragged";
             this.swapTargetClass = OPTS.swapTargetClass || "swap-target";
@@ -241,12 +243,13 @@
                         try {
 
                             this.onDropFunc(
-                                e.target,
-                                this.container
+                                this.draggedElem,
+                                this.container,
+                                this.lastSwapElem
                             );
 
                         } catch ( error ) {
-                            console.error( "onDropFunc callback exception:", error );
+                            console.exception( "onDropFunc callback exception:", error );
                         }
                     }
                     if ( this.lastSwapElem !== null ) {
@@ -266,7 +269,13 @@
          * @param {object} e 
          */
         mousedownHandler( e ) {
-
+            if(this.onBeforeDragFunc !== null) {
+                try {
+                    this.onBeforeDragFunc( this.draggedElem );
+                } catch (error) {
+                    console.exception( "onBeforeDragFunc exception: ", error);
+                }
+            }
             // Inner click offset.
             // Without this top left corner 
             // of the dragged elem would jump 
@@ -450,6 +459,7 @@
                 // some references
                 // are already removed.
                 this.getMarkerPos( eX, eY, op );
+
             }
         }
 
@@ -723,42 +733,5 @@
     // Export
     window[ name ] = _;
 
-} )( "dl" )
+} )( "DSO" )
 
-const ORDER = {
-    isDraggedClass: "is-dragged",
-    hasDraggedClass: "has-dragged",
-    targetContainerClass: "is-target",
-    elemSelector: "li",
-    handlerElemSelector: "li>span",
-    // onDropFunc: () => onDrop()
-};
-const SWAP = {
-    isDraggedClass: "is-dragged",
-    hasDraggedClass: "has-dragged",
-    targetContainerClass: "is-target",
-    elemSelector: "li",
-    handlerElemSelector: "li>span",
-    isSwap: true,
-    swapTargetClass: "swap-target"
-};
-
-const sl1 = new dl( document.querySelector( "#sl-1" ), ORDER );
-const sl2 = new dl( document.querySelector( "#sl-2" ), ORDER );
-const sl3 = new dl( document.querySelector( "#sl-3" ), ORDER );
-const sl4 = new dl( document.querySelector( "#sl-4" ), ORDER );
-
-const sl5 = new dl( document.querySelector( "#sl-5" ), SWAP );
-const sl6 = new dl( document.querySelector( "#sl-6" ), SWAP );
-const sl7 = new dl( document.querySelector( "#sl-7" ), SWAP );
-const sl8 = new dl( document.querySelector( "#sl-8" ), SWAP );
-
-sl5.setlinked( [ sl6, sl7, sl8 ] );
-sl6.setlinked( [ sl5, sl7, sl8 ] );
-sl7.setlinked( [ sl5, sl6, sl8 ] );
-sl8.setlinked( [ sl5, sl6, sl7 ] );
-
-var sls = [ sl1, sl2, sl3, sl4 ];
-sls.forEach( ( sl, i ) => {
-    sl.setlinked( sls.slice( sls.length - 1 - i ) )
-} );
