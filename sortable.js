@@ -745,10 +745,7 @@ const sl1 = new dl( document.querySelector( "#sl-1" ), ORDER );
 const sl2 = new dl( document.querySelector( "#sl-2" ), ORDER );
 const sl3 = new dl( document.querySelector( "#sl-3" ), ORDER );
 const sl4 = new dl( document.querySelector( "#sl-4" ), ORDER );
-var sls = [ sl1, sl2, sl3, sl4 ];
-sls.forEach( ( sl, i ) => {
-    sl.setlinked( sls.slice( sls.length - 1 - i ) )
-} );
+
 
 const sl5 = new dl( document.querySelector( "#sl-5" ), SWAP );
 const sl6 = new dl( document.querySelector( "#sl-6" ), SWAP );
@@ -757,3 +754,8 @@ const sl7 = new dl( document.querySelector( "#sl-7" ), SWAP );
 sl5.setlinked( [ sl6, sl7 ] );
 sl6.setlinked( [ sl5, sl7 ] );
 sl7.setlinked( [ sl5, sl6 ] );
+
+var sls = [ sl1, sl2, sl3, sl4 ];
+sls.forEach( ( sl, i ) => {
+    sl.setlinked( sls.slice( sls.length - 1 - i ) )
+} );
