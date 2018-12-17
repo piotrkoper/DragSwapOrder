@@ -359,7 +359,9 @@
          * @param {array} list 
          */
         setlinked( list ) {
-            this.linked = list.filter( l => l !== this );
+            this.linked = list.filter( 
+                l => l !== this && l.isSwap === this.isSwap 
+            );
         }
 
         onDragStart() {
@@ -746,14 +748,15 @@ const sl2 = new dl( document.querySelector( "#sl-2" ), ORDER );
 const sl3 = new dl( document.querySelector( "#sl-3" ), ORDER );
 const sl4 = new dl( document.querySelector( "#sl-4" ), ORDER );
 
-
 const sl5 = new dl( document.querySelector( "#sl-5" ), SWAP );
 const sl6 = new dl( document.querySelector( "#sl-6" ), SWAP );
 const sl7 = new dl( document.querySelector( "#sl-7" ), SWAP );
+const sl8 = new dl( document.querySelector( "#sl-8" ), SWAP );
 
-sl5.setlinked( [ sl6, sl7 ] );
-sl6.setlinked( [ sl5, sl7 ] );
-sl7.setlinked( [ sl5, sl6 ] );
+sl5.setlinked( [ sl6, sl7, sl8 ] );
+sl6.setlinked( [ sl5, sl7, sl8 ] );
+sl7.setlinked( [ sl5, sl6, sl8 ] );
+sl8.setlinked( [ sl5, sl6, sl7 ] );
 
 var sls = [ sl1, sl2, sl3, sl4 ];
 sls.forEach( ( sl, i ) => {

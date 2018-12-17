@@ -6,22 +6,18 @@
     padding: 0;
     margin: .5em;
     min-width: 5em;
-    min-height: 5em;
+    min-height: 4em;
     float: left;
     background: chocolate;
     border-top:.5em solid white
 }
 .sl.square-2 {
     width: 10em;
-    min-height: 10em;
-}
-.sl.square-2 {
-    width: 10em;
-    min-height: 10em;
+    min-height: 8em;
 }
 .sl.square-3 {
     width: 15em;
-    min-height: 15em;
+    min-height: 12em;
 }
 
 .sl li {
@@ -30,27 +26,20 @@
     padding: .5em;
     background: rgb(131, 131, 131);
     width: 4em;
-    height: 4em;
+    height: 3.5em;
     color:rgb(182,182,182)
 }
 
-
 .sl.square li {
-    display: inline-block;
+    display: block;
     float: left;
 }
-.has-dragged ,
+
 .is-target {
     border-top:.5em solid chocolate
 }
 .has-dragged {
-    /* border: .5em solid rgb(74, 95, 61); */
-}
-.is-target li {
-    /* border-bottom: .5em solid rgb(131, 79, 79); */
-}
-.has-dragged li {
-    /* border-bottom: .5em solid rgb(74, 95, 61); */
+    border-top-color: cadetblue;
 }
 
 .sl li span {
@@ -61,7 +50,7 @@
     position: relative;
     text-align: center;
     display:block;
-    line-height: 5;
+    line-height: 4;
     border: .5em solid rgb(131, 79, 79);
 }
 
@@ -72,8 +61,8 @@
 .is-raised{
     z-index: 1;
 }
-.is-dragged {
-
+.sl li.is-dragged span {
+    border-color: chocolate;
 }
 .sl li.swap-target{
     background: cornflowerblue;
@@ -86,4 +75,4 @@
     content: "";
     clear: both;
     display: table;
-  }
+}
