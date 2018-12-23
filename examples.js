@@ -19,6 +19,7 @@ const SWAP = {
     swapTargetClass: "swap-target",
     onDropFunc: ( draggedElem, fromContainer, targetElem ) => console.log( draggedElem, fromContainer, targetElem ),
     onBeforeDragFunc: ( draggedElem ) => console.log( draggedElem ),
+    markerSetDimentions: false
 };
 
 const sl1 = new DSO( document.querySelector( "#sl-1" ), ORDER );
@@ -30,6 +31,11 @@ const sl5 = new DSO( document.querySelector( "#sl-5" ), SWAP );
 const sl6 = new DSO( document.querySelector( "#sl-6" ), SWAP );
 const sl7 = new DSO( document.querySelector( "#sl-7" ), SWAP );
 const sl8 = new DSO( document.querySelector( "#sl-8" ), SWAP );
+
+SWAP.isSwap = false;
+const sl9 = new DSO( document.querySelector( "#sl-9" ), SWAP );
+SWAP.markerSetDimentions = true;
+const sl10 = new DSO( document.querySelector( "#sl-10" ), SWAP );
 
 sl5.setlinked( [ sl6, sl7, sl8 ] );
 sl6.setlinked( [ sl5, sl7, sl8 ] );

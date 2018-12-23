@@ -1,5 +1,5 @@
 ( function ( name ) {
-
+    "use strict";
     /**
      * Find the first ancestor of el where callback returns true.
      * Returns the root element 
@@ -148,6 +148,17 @@
             // is it new container?
             this.isSwap = OPTS.hasOwnProperty( "isSwap" ) ?
                 OPTS.isSwap === true : false;
+
+            this.useCSSTranslate = OPTS.hasOwnProperty( "useCSSTranslate" ) ?
+                OPTS.useCSSTranslate === true : true;
+
+            this.moveElem = this.useCSSTranslate ?
+                this.translateElem : this.dragElem;
+            /**
+             * The last element beign swapped or moved up/down.
+             * This property is reset every mouseup event.
+             * Used in both scenarios for isSwap: true and false.
+             */
             this.lastSwapElem = null;
 
             // Check debounce rate. It does not make sense to have 
@@ -162,6 +173,7 @@
             this.dragListener = this.debounceMs ?
                 this.debouncedDrag.bind( this ) :
                 this.drag.bind( this );
+            this.mouseupListener = this.oneMouseupHandler.bind( this );
 
             this.initX; // Initial mouse click X offset
             this.initY; // Initial mouse click Y offset
@@ -222,46 +234,44 @@
                     this.mousedownHandler( e );
                 }
             } );
-
-            /**
-             * Removes dragger and disableSelect
-             * from window when mouse released. 
-             * It will stop dragging 
-             * and reorder elems in
-             * the target list.
-             */
-            window.addEventListener( "mouseup", ( e ) => {
-                e.preventDefault();
-                if ( this.isActive ) {
-
-                    this.mouseupHandler();
-                    // Post handler
-                    if ( this.onDropFunc !== null && this.dragStarted ) {
-                        // Securely deal with 
-                        // user supplied 
-                        // callbacks.
-                        try {
-
-                            this.onDropFunc(
-                                this.draggedElem,
-                                this.container,
-                                this.lastSwapElem
-                            );
-
-                        } catch ( error ) {
-                            console.exception( "onDropFunc callback exception:", error );
-                        }
+        }
+        /**
+         * On drop controller function.
+         * MouseupListener gets attached 
+         * to window as listener every time 
+         * user click is recived and starts 
+         * the process in mousedownHandler.
+         * 
+         * The method is bind to instance 
+         * property mouseupListener
+         * as a reference for removeEventListener
+         * called at the end of the process.
+         * @param {object} e 
+         */
+        oneMouseupHandler( e ) {
+            e.preventDefault();
+            // is Active === on mousedown triggered
+            if ( this.isActive ) {
+                if ( this.onDropFunc !== null && this.dragStarted ) {
+                    // Securely deal with 
+                    // user supplied 
+                    // callbacks.
+                    try {
+                        this.onDropFunc(
+                            this.draggedElem,
+                            this.container,
+                            this.lastSwapElem
+                        );
+                    } catch ( error ) {
+                        console.exception( "onDropFunc callback exception:", error );
                     }
-                    if ( this.lastSwapElem !== null ) {
-                        addRemoveClass( this.lastSwapElem, this.swapTargetClass, false );
-                    }
-                    this.isActive = false;
-                    this.dragStarted = false;
-                    this.draggedElem = null;
-                    this.marker = null;
                 }
 
-            }, false );
+                this.reset();
+
+            }
+            // unbind the event
+            e.target.removeEventListener( e.type, this.mouseupListener );
         }
 
         /**
@@ -269,19 +279,28 @@
          * @param {object} e 
          */
         mousedownHandler( e ) {
-            if(this.onBeforeDragFunc !== null) {
+            // Run client user provided callback 
+            if ( this.onBeforeDragFunc !== null ) {
                 try {
                     this.onBeforeDragFunc( this.draggedElem );
-                } catch (error) {
-                    console.exception( "onBeforeDragFunc exception: ", error);
+                } catch ( error ) {
+                    console.exception( "onBeforeDragFunc exception: ", error );
                 }
             }
-            // Inner click offset.
-            // Without this top left corner 
-            // of the dragged elem would jump 
-            // to the cursor position.
+
+            // Make reset action an event listener.
+            // Removes dragger and disableSelect events
+            // from window when mouse released. 
+            // It will stop dragging 
+            // and reorder/swap elems in the target list.
+            // It will remove itself from its target 
+            // once called for the first time.
+            window.addEventListener( "mouseup", this.mouseupListener, false );
+
+            // Initial click offset.
             this.initX = this.draggedElem.offsetLeft - e.clientX;
             this.initY = this.draggedElem.offsetTop - e.clientY;
+
 
             // Get drop area element/placeholder
             this.marker = this.getMarker();
@@ -302,7 +321,9 @@
                 disableSelect,
                 false
             );
-            // Our main dragging event
+
+            // Our main dragging event 
+            // waiting for mouse movement.
             window.addEventListener(
                 "mousemove",
                 this.dragListener,
@@ -311,10 +332,17 @@
 
             // Mark as active
             this.isActive = true;
-            this.lastSwapElem = null;
         }
-
-        mouseupHandler() {
+        /**
+         * Reset user interface:
+         * Drop the moved element in the new place,
+         * reset css classes and styles,
+         * remove temporary event listeners (mousemove and text select),
+         * Reset controll variables.
+         */
+        reset() {
+            // Check if user actually moved the elem
+            // dragStarted = true in mousemove
             if ( this.dragStarted ) {
                 let tc = this.marker.parentNode;
                 // add to the list at the new position
@@ -323,19 +351,24 @@
                     this.marker
                 );
                 tc.removeChild( this.marker );
+
                 // Clear style after draggedElem has been moved
+                if ( this.useCSSTranslate ) {
+                    this.draggedElem.style.transform = "";
+                }
+
                 this.draggedElem.style.left = "";
                 this.draggedElem.style.top = "";
+
                 this.draggedElem.style.position = "";
             }
 
-
+            // Clear css classes
             addRemoveClass(
                 this.draggedElem,
                 "is-raised",
                 false
             );
-            // remove user classes
             addRemoveClass(
                 this.draggedElem,
                 this.isDraggedClass,
@@ -346,6 +379,14 @@
                 this.hasDraggedClass,
                 false
             );
+            if ( this.lastSwapElem !== null ) {
+                addRemoveClass(
+                    this.lastSwapElem,
+                    this.swapTargetClass,
+                    false
+                );
+            }
+
             // Unflash target containers
             this.markTargetContainers( false );
             // Remove listeners
@@ -360,7 +401,11 @@
                 false
             );
 
-
+            this.lastSwapElem = null;
+            this.isActive = false;
+            this.dragStarted = false;
+            this.draggedElem = null;
+            this.marker = null;
         }
 
         /**
@@ -368,35 +413,52 @@
          * @param {array} list 
          */
         setlinked( list ) {
-            this.linked = list.filter( 
-                l => l !== this && l.isSwap === this.isSwap 
+            this.linked = list.filter(
+                l => l !== this && l.isSwap === this.isSwap
             );
         }
-
-        onDragStart() {
-            if ( !this.dragStarted ) {
-
-                this.moveMarker(
-                    this.container,
-                    this.draggedElem
-                );
-
-                this.dragStarted = true;
-                // Dragged element must be position absolute
-                this.draggedElem.style.position = "absolute";
-                // apply user classes to the element that is dragged
-                addRemoveClass(
-                    this.draggedElem,
-                    this.isDraggedClass,
-                    true
-                );
-
-                addRemoveClass(
-                    this.container,
-                    this.hasDraggedClass,
-                    true
-                );
+        /**
+         * Initialisation for move up/down and swap
+         * mousemove event.
+         */
+        onDragStart( e ) {
+            e.preventDefault();
+            if ( this.dragStarted ) {
+                // we are already moving
+                return this;
             }
+            // Yes, we have actually moved.
+            this.dragStarted = true;
+
+            // Its time to make the dragged element 
+            // follow the mouse and move marker into 
+            // the empty place.
+            this.moveMarker(
+                this.container,
+                this.draggedElem
+            );
+
+            // Dragged element must be positioned absolutely
+            this.draggedElem.style.position = "absolute";
+            // And moved top/left 0 if translated
+            if ( this.useCSSTranslate ) {
+                this.draggedElem.style.top = "0";
+                this.draggedElem.style.left = "0";
+            }
+
+            // apply user classes to the element that is dragged
+            addRemoveClass(
+                this.draggedElem,
+                this.isDraggedClass,
+                true
+            );
+            // and its container
+            addRemoveClass(
+                this.container,
+                this.hasDraggedClass,
+                true
+            );
+            return this;
         }
 
         /**
@@ -404,10 +466,15 @@
          * @param {object} e 
          */
         drag( e ) {
-            e.preventDefault();
-            this.onDragStart();
-            this.dragElem( e );
-            this.markerHandler( e.clientX, e.clientY );
+            this.onDragStart( e )
+                .moveElem(
+                    this.initX + e.clientX,
+                    this.initY + e.clientY
+                )
+                .markerHandler( 
+                    e.clientX, 
+                    e.clientY 
+                );
         }
 
         /**
@@ -415,10 +482,13 @@
          * @param {object} e 
          */
         debouncedDrag( e ) {
-            e.preventDefault();
-            this.onDragStart();
-            // Called exactly at the time of the event
-            this.dragElem( e );
+            // Called exactly at the time of the event,
+            // no debounce
+            this.onDragStart( e )
+                .moveElem(
+                    this.initX + e.clientX,
+                    this.initY + e.clientY
+                );
             debounceHandler( () => {
                 // Called after debounce ms
                 this.markerHandler( e.clientX, e.clientY );
@@ -429,37 +499,47 @@
          * Make the draggedElem follow the mouse
          * @param {object} e 
          */
-        dragElem( e ) {
-
-            const eX = e.clientX,
-                eY = e.clientY,
-                newX = this.initX + eX,
-                newY = this.initY + eY;
-
+        dragElem( newX, newY ) {
             this.draggedElem.style.left = newX + "px";
             this.draggedElem.style.top = newY + "px";
-            //draggedElem.style.transform = `translate(${newX}px,${newY}px)`;
+
+            return this;
+        }
+        /**
+         * Make the draggedElem follow the mouse
+         * using translate
+         * @param {object} e 
+         */
+        translateElem( newX, newY ) {
+            this.draggedElem
+                .style
+                .transform = `translate(${newX}px,${newY}px)`;
+
+            return this;
         }
 
         /**
-         * Move marker handler
-         * @param {int} eX 
-         * @param {int} eY 
+         * Move marker handler 
+         * and reorder/swap target elems.
+         * 
+         * @param {int} eX event.clientX
+         * @param {int} eY event.clientY
          */
         markerHandler( eX, eY ) {
+            // Make sure it's still active.
+            // Debounced handler could 
+            // call this method after 
+            // some references
+            // are already removed.
             if ( this.isActive ) {
-
                 const op = this.isSwap ?
                     ( tc, to ) => this.swapMarker( tc, to ) :
                     ( tc, to ) => this.moveMarker( tc, to );
 
-                // Make sure it's still active.
-                // Debounced handler could 
-                // call this method after 
-                // some references
-                // are already removed.
-                this.getMarkerPos( eX, eY, op );
-
+                const pos = this.getMarkerPos( eX, eY );
+                if ( pos.status ) {
+                    op( pos.tc, pos.to );
+                }
             }
         }
 
@@ -511,18 +591,26 @@
          * @param {int} eY 
          * @param {function} onMove 
          */
-        getMarkerPos( eX, eY, onMove ) {
+        getMarkerPos( eX, eY ) {
             const tc = this.getTargetContainer( eX, eY );
             if ( tc === null ) {
                 // No container, no moving marker
-                return;
+                return {
+                    status: false,
+                    tc: null,
+                    to: null,
+                };
             }
             // get children from target container
             const elems = tc.querySelectorAll( this.elemSelector );
             if ( !elems.length ) {
-                // Empty container - attach to the end of the list.
-                onMove( tc, null );
-                return;
+                // Empty container - 
+                // attach to the end of the list.
+                return {
+                    status: true,
+                    tc: tc,
+                    to: null, // End of the list
+                };
             }
 
             var to = null;
@@ -542,11 +630,25 @@
                 // outside any valid target, marker would jump
                 // to the end of the container insted keeping
                 // last position. 
-                return;
+                return {
+                    status: false,
+                    tc: null,
+                    to: null,
+                };
             }
-
-            onMove( tc, to );
+            return {
+                status: true,
+                tc: tc,
+                to: to,
+            };
         }
+        /**
+         * Common functionality for moving and swapping.
+         * Returning false will halt the execution in 
+         * moving/swapping controller.
+         * @param {object} tc 
+         * @param {object} to 
+         */
         beforeMove( tc, to ) {
             if ( this.marker === null ) {
                 // Not this time, marker not set
@@ -561,7 +663,7 @@
             return true;
         }
         /**
-         * Move marker when dragged element changes its target.
+         * Move marker controller when dragged element changes its target.
          * @param {object} tc wrapper
          * @param {object} to element to push up/down
          */
@@ -572,11 +674,19 @@
             }
 
             if ( this.lastSwapElem !== null ) {
-                addRemoveClass( this.lastSwapElem, this.swapTargetClass, false );
+                addRemoveClass(
+                    this.lastSwapElem,
+                    this.swapTargetClass,
+                    false
+                );
             }
 
             if ( to !== this.draggedElem ) {
-                addRemoveClass( to, this.swapTargetClass, true );
+                addRemoveClass(
+                    to,
+                    this.swapTargetClass,
+                    true
+                );
             }
 
             this.lastSwapElem = to;
@@ -596,7 +706,11 @@
                 this.marker, to.nextElementSibling
             );
         }
-
+        /**
+         * Swapping controller
+         * @param {object} tc wrapper
+         * @param {object} to element to swap with
+         */
         swapMarker( tc, to ) {
 
             if ( !this.beforeMove( tc, to ) ) {
@@ -609,7 +723,11 @@
             const isUp = to.nextElementSibling === this.marker;
 
             if ( this.lastSwapElem !== null ) {
-                addRemoveClass( this.lastSwapElem, this.swapTargetClass, false );
+                addRemoveClass(
+                    this.lastSwapElem,
+                    this.swapTargetClass,
+                    false
+                );
                 // Reset previuos swap
                 // only drop will change the the elems
                 if ( this.lastSwapElem === to ) {
@@ -644,7 +762,11 @@
                 }
             }
 
-            addRemoveClass( to, this.swapTargetClass, true );
+            addRemoveClass(
+                to,
+                this.swapTargetClass,
+                true
+            );
 
             if ( isUp ) {
                 // If moving up - swap marker
@@ -698,10 +820,10 @@
                         throw `customMarkerFunc should return DOM element; ${typeof cm} returned instead.`;
 
                     }
-                    decorateDraggedElem( this.draggedElem );
+
                     return cm;
                 } catch ( error ) {
-                    console.error(
+                    console.exxception(
                         "Default marker used. Exception while dealing with custom marker:",
                         error
                     );
@@ -709,18 +831,16 @@
 
             }
 
-            const dim = decorateDraggedElem( this.draggedElem );
             const m = this.draggedElem.cloneNode();
-            // Its empty inside - fill the marker
-            // with dashed indicator.
-            m.innerHTML = `<span 
-                        style="margin:2px;
-                            display:block;
-                            border:dashed 3px #666;
-                            width:${dim.w-10}px;
-                            height:${dim.h-10}px">
-                    </span>`;
 
+                m.innerHTML = `<span 
+                    style="margin:2px;
+                        display:block;
+                        border:dashed 3px #666;
+                        width:calc(100% - 10px);
+                        height:calc(100% - 10px);">
+                    </span>`;
+            
             addRemoveClass(
                 m, "marker", true
             );
@@ -734,4 +854,3 @@
     window[ name ] = _;
 
 } )( "DSO" )
-

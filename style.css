@@ -9,11 +9,12 @@
     min-height: 4em;
     float: left;
     background: chocolate;
-    border-top:.5em solid white
+    border-top:.5em solid white;
+    position: relative
 }
 .sl.square-2 {
-    width: 10em;
-    min-height: 8em;
+    width: 20em;
+    min-height: 16em;
 }
 .sl.square-3 {
     width: 15em;
@@ -29,7 +30,10 @@
     height: 3.5em;
     color:rgb(182,182,182)
 }
-
+.sl.square-2 li {
+    width: 9em;
+    height: 8em;
+}
 .sl.square li {
     display: block;
     float: left;
@@ -70,6 +74,9 @@
 }
 .sl li.marker {
     background: cadetblue
+}
+.sl li.tall {
+    height:6em
 }
 .clearfix::after {
     content: "";
